@@ -3,6 +3,18 @@ import re
 import traceback
 
 
+def get_line():
+    try:
+        last_line = [line for line in traceback.format_stack() if "myproject" in line][-3]
+        pattern = r"\"(.*?)\", line (\d+),.*?\n(.*?)\n"
+        match = re.search(pattern, last_line)
+        if match:
+            file_path, line_number, next_line = match.groups()
+            return f"{file_path}:{line_number}\n {next_line}"
+    except:
+        return ""
+
+
 # https://markusholtermann.eu/2016/01/syntax-highlighting-for-djangos-sql-query-logging/
 class SQLFormatter(logging.Formatter):
     def format(self, record):
@@ -32,6 +44,10 @@ class SQLFormatter(logging.Formatter):
                 sql, SqlLexer(), TerminalTrueColorFormatter(style="default")
             )
 
-        
-        record.statement = sql
+        # Set the record's statement to the formatted query
+        statement = sql
+        line_executing_code = get_line()
+        if line_executing_code:
+            statement = f"{line_executing_code}\n{sql}"
+        record.statement = statement
         return super(SQLFormatter, self).format(record)
